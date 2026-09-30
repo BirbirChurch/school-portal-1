@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>የትምህርት ቤት አስተዳደር እና የተማሪዎች ፖርታል</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f4f6f9; color: #333; }
+
+    /* Top Navigation Bar */
+    header { background-color: #1a5276; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    header h1 { font-size: 20px; }
+    nav { display: flex; gap: 8px; flex-wrap: wrap; }
+    .nav-btn { background-color: #2980b9; color: white; border: none; padding: 9px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.3s; }
+    .nav-btn:hover { background-color: #1f618d; }
+    .nav-btn.active { background-color: #27ae60; }
+
+    /* Layout Containers */
+    .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
+    .page-section { display: none; background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .page-section.active-page { display: block; }
+
+    /* Headings & Badges */
+    h2 { font-size: 20px; color: #1a5276; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; background-color: #eaf2f8; color: #1a5276; }
+
+    /* Form Styles */
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 13px; color: #475569; }
+    input[type="text"], input[type="number"], select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
+    input:focus, select:focus { border-color: #3498db; }
+    .btn { background-color: #27ae60; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; width: 100%; }
+    .btn:hover { background-color: #219653; }
+
+    /* Tables */
+    .table-container { overflow-x: auto; margin-top: 15px; }
+    table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
+    th, td { border: 1px solid #e2e8f0; padding: 10px; white-space: nowrap; }
+    th { background-color: #1a5276; color: white; }
+    tr:nth-child(even) { background-color: #f8fafc; }
+    .pass { color: #27ae60; font-weight: bold; }
+    .fail { color: #e74c3c; font-weight: bold; }
+
+    /* Action Buttons inside Tables */
+    .btn-sm { padding: 5px 10px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold; margin: 2px; }
+    .btn-edit { background-color: #f39c12; color: white; }
+    .btn-delete { background-color: #e74c3c; color: white; }
+
+    /* Search & Student Info Cards */
+    .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+    .search-box input { flex: 1; }
+    .search-box button { background-color: #3498db; color: white; border: none; padding: 0 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+    .info-item span { font-size: 12px; color: #64748b; display: block; }
+    .info-item strong { font-size: 15px; color: #0f172a; }
+
+    /* Report Card Printable Box */
+    .report-card { border: 2px solid #1a5276; padding: 25px; border-radius: 8px; background: white; margin-top: 20px; }
+    .report-header { text-align: center; margin-bottom: 20px; border-bottom: 2px dashed #cbd5e1; padding-bottom: 15px; }
+    .report-header h3 { color: #1a5276; font-size: 22px; }
+    
+    /* Print Utility */
+    @media print {
+      body * { visibility: hidden; }
+      .printable, .printable * { visibility: visible; }
+      .printable { position: absolute; left: 0; top: 0; width: 100%; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="no-print">
+    <h1>🏫 የትምህርት ቤት መረጃ ፖርታል</h1>
+    <nav>
+      <button id="btn-portal" class="nav-btn active" onclick="showPage('student-portal', 'btn-portal')">🎓 Student Portal</button>
+      <button id="btn-register" class="nav-btn" onclick="showPage('student-registration', 'btn-register')">📝 Student Registration</button>
+      <button id="btn-grades" class="nav-btn" onclick="showPage('grades-report', 'btn-grades')">📊 Grades & Report Cards</button>
+      <button id="btn-admin" class="nav-btn" onclick="showPage('admin-dashboard', 'btn-admin')">⚙️ Admin Dashboard</button>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <!-- PAGE 1: STUDENT PORTAL -->
+    <section id="student-portal" class="page-section active-page">
+      <h2>🎓 የተማሪዎች መረጃ እና ውጤት መፈለጊያ (Student Portal)</h2>
+      <div class="search-box">
+        <input type="text" id="portalSearchInput" placeholder="የተማሪውን ስም ወይም መለያ ቁጥር (ID) ያስገቡ...">
+        <button onclick="searchPortalStudent()">ፈልግ</button>
+      </div>
+
+      <div id="portalStudentResult" style="display: none;">
+        <div class="info-grid">
+          <div class="info-item"><span>የተማሪው ስም</span><strong id="pName">-</strong></div>
+          <div class="info-item"><span>መለያ ቁጥር (ID)</span><strong id="pId">-</strong></div>
+          <div class="info-item"><span>ጾታ</span><strong id="pSex">-</strong></div>
+          <div class="info-item"><span>ክፍል</span><strong id="pGrade">-</strong></div>
+          <div class="info-item"><span>የአመቱ አማካይ ውጤት</span><strong id="pAvg">-</strong></div>
+          <div class="info-item"><span>ሁኔታ</span><strong id="pStatus">-</strong></div>
+        </div>
+
+        <h3>የትምህርት አይነቶች ውጤት ዝርዝር</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ትምህርት</th>
+                <th>1ኛ ሴሚስተር</th>
+                <th>2ኛ ሴሚስተር</th>
+                <th>አማካይ</th>
+              </tr>
+            </thead>
+            <tbody id="portalGradesBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="portalNotFound" style="display: none; color: #e74c3c; text-align: center; margin-top: 15px;">
+        ❌ የቀረበው መረጃ አልተገኘም! እባክዎን በትክክል መፃፉን ያረጋግጡ።
+      </div>
+    </section>
+
+
+    <!-- PAGE 2: STUDENT REGISTRATION -->
+    <section id="student-registration" class="page-section">
+      <h2>📝 አዲስ ተማሪ መመዝገቢያ (Student Registration)</h2>
+      <form id="registrationForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>ሙሉ ስም:</label>
+            <input type="text" id="regName" required placeholder="ምሳሌ፡ አበበ ከበደ">
+          </div>
+          <div class="form-group">
+            <label>መለያ ቁጥር (ID):</label>
+            <input type="text" id="regId" required placeholder="ምሳሌ፡ ST-101">
+          </div>
+          <div class="form-group">
+            <label>የተማሪ ኮድ:</label>
+            <input type="text" id="regCode" required placeholder="ምሳሌ፡ C-001">
+          </div>
+          <div class="form-group">
+            <label>ጾታ:</label>
+            <select id="regSex">
+              <option value="ወ">ወንድ</option>
+              <option value="ሴ">ሴት</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>እድሜ:</label>
+            <input type="number" id="regAge" value="14">
+          </div>
+          <div class="form-group">
+            <label>ክፍል:</label>
+            <input type="text" id="regGradeLevel" value="8ኛ">
+          </div>
+        </div>
+        <button type="button" class="btn" onclick="registerNewStudent()">ተማሪውን መዝግብ</button>
+      </form>
+    </section>
+
+
+    <!-- PAGE 3: GRADES & REPORT CARDS -->
+    <section id="grades-report" class="page-section">
+      <h2>📊 የተማሪዎች ውጤት እና የትምህርት ማስረጃ (Grades & Report Cards)</h2>
+      
+      <div class="form-group" style="max-width: 400px; margin-bottom: 20px;">
+        <label>የተማሪ ስም ይምረጡ:</label>
+        <select id="reportStudentSelect" onchange="generateReportCard()">
+          <option value="">-- ተማሪ ይምረጡ --</option>
+        </select>
+      </div>
+
+      <div id="reportCardContainer" class="printable" style="display: none;">
+        <div class="report-card">
+          <div class="report-header">
+            <h3>ብርብር ከተማ ርኆቦት ትምህርት ቤት</h3>
+            <p>የተማሪዎች የውጤት ካርድ (Official Student Report Card)</p>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-item"><span>የተማሪው ስም:</span><strong id="rcName">-</strong></div>
+            <div class="info-item"><span>መለያ ቁጥር (ID):</span><strong id="rcId">-</strong></div>
+            <div class="info-item"><span>ክፍል:</span><strong id="rcGrade">-</strong></div>
+            <div class="info-item"><span>የአመቱ አማካይ:</span><strong id="rcAvg">-</strong></div>
+            <div class="info-item"><span>ደረጃ:</span><strong id="rcRank">-</strong></div>
+            <div class="info-item"><span>ሁኔታ:</span><strong id="rcStatus">-</strong></div>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>ትምህርት</th>
+                  <th>1ኛ ሴሚስተር</th>
+                  <th>2ኛ ሴሚስተር</th>
+                  <th>አመታዊ አማካይ</th>
+                </tr>
+              </thead>
+              <tbody id="rcGradesBody"></tbody>
+            </table>
+          </div>
+
+          <div style="margin-top: 30px; display: flex; justify-content: space-between; text-align: center;">
+            <div>___________________<br><small>የክፍሉ መምህር ፊርማ</small></div>
+            <div>___________________<br><small>የርዕሰ መምህር ፊርማ እና ማህተም</small></div>
+          </div>
+        </div>
+        <br>
+        <button class="nav-btn no-print" onclick="window.print()" style="background-color: #1a5276;">🖨️ የውጤት ካርዱን አትም (Print Report Card)</button>
+      </div>
+    </section>
+
+
+    <!-- PAGE 4: ADMIN DASHBOARD -->
+    <section id="admin-dashboard" class="page-section">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2>⚙️ የአስተዳዳሪ ገጽ (Admin Dashboard & Roster)</h2>
+        <span class="badge" id="totalStudentsCount">ጠቅላላ ተማሪዎች: 0</span>
+      </div>
+
+      <!-- Import / Export Section -->
+      <div style="background-color: #eaf2f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <strong>የExcel ፋይል ማስተካከያ:</strong>
+        <input type="file" id="excelInput" accept=".xlsx, .xls" style="display: none;" onchange="importExcelData(event)">
+        <button class="nav-btn" style="background-color: #1e8449;" onclick="document.getElementById('excelInput').click()">📥 Import Excel</button>
+        <button class="nav-btn" style="background-color: #2e86de;" onclick="exportExcelData()">📤 Export Excel</button>
+      </div>
+
+      <h3>📋 የተማሪዎች ሙሉ ሮስተር (Student Roster)</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ተ/ቁ</th>
+              <th>መለያ ቁጥር (ID)</th>
+              <th>ስም</th>
+              <th>ኮድ</th>
+              <th>ጾታ</th>
+              <th>እድሜ</th>
+              <th>ክፍል</th>
+              <th>አማካይ</th>
+              <th>ሁኔታ</th>
+              <th>ድርጊቶች</th>
+            </tr>
+          </thead>
+          <tbody id="adminRosterBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+<script>
+  // Subjects List
+  const subjects = ["አማርኛ", "እንግሊዝኛ", "ሂሳብ", "ፊዚክስ", "ኬሚስትሪ", "ባዮሎጂ", "ታሪክ", "ጂኦግራፊ", "ዜግነት", "ኢንፎርሜሽን ቴክኖሎጂ", "ስፖርት", "ስነ-ጥበብ"];
+
+  // Page Navigation Handler
+  function showPage(pageId, btnId) {
+    document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active-page'));
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+    document.getElementById(pageId).classList.add('active-page');
+    if (btnId) document.getElementById(btnId).classList.add('active');
+
+    // Page Specific Renders
+    if (pageId === 'admin-dashboard') renderAdminRoster();
+    if (pageId === 'grades-report') populateReportSelect();
+  }
+
+  // LocalStorage Helpers
+  function getStudents() {
+    return JSON.parse(localStorage.getItem('app_students_data')) || [];
+  }
+
+  function saveStudents(data) {
+    localStorage.setItem('app_students_data', JSON.stringify(data));
+  }
+
+  // 1. STUDENT REGISTRATION LOGIC
+  function registerNewStudent() {
+    const name = document.getElementById('regName').value.trim();
+    const id = document.getElementById('regId').value.trim();
+    const code = document.getElementById('regCode').value.trim();
+    const sex = document.getElementById('regSex').value;
+    const age = document.getElementById('regAge').value;
+    const gradeLevel = document.getElementById('regGradeLevel').value;
+
+    if (!name || !id || !code) {
+      alert("እባክዎን ሁሉንም አስፈላጊ መረጃዎች ይሙሉ!");
+      return;
+    }
+
+    const students = getStudents();
+    const defaultGrades = Array(12).fill(80);
+
+    const newStudent = {
+      id, code, name, sex, age, gradeLevel,
+      sem1: [...defaultGrades],
+      sem2: [...defaultGrades],
+      avgAnnual: 80,
+      statusAnnual: "አልፏል"
+    };
+
+    students.push(newStudent);
+    saveStudents(students);
+
+    alert("✅ ተማሪው በትክክል ተመዝግቧል!");
+    document.getElementById('registrationForm').reset();
+    showPage('admin-dashboard', 'btn-admin');
+  }
+
+  // 2. STUDENT PORTAL SEARCH LOGIC
+  function searchPortalStudent() {
+    const query = document.getElementById('portalSearchInput').value.trim().toLowerCase();
+    const resultDiv = document.getElementById('portalStudentResult');
+    const notFoundDiv = document.getElementById('portalNotFound');
+
+    resultDiv.style.display = "none";
+    notFoundDiv.style.display = "none";
+
+    if (!query) return;
+
+    const students = getStudents();
+    const student = students.find(s => s.id.toLowerCase() === query || s.name.toLowerCase().includes(query));
+
+    if (student) {
+      document.getElementById('pName').innerText = student.name;
+      document.getElementById('pId').innerText = student.id;
+      document.getElementById('pSex').innerText = student.sex;
+      document.getElementById('pGrade').innerText = student.gradeLevel || "8ኛ";
+      document.getElementById('pAvg').innerText = student.avgAnnual || 0;
+      
+      const statusEl = document.getElementById('pStatus');
+      statusEl.innerText = student.statusAnnual || "አልፏል";
+      statusEl.className = student.avgAnnual >= 50 ? "pass" : "fail";
+
+      const tbody = document.getElementById('portalGradesBody');
+      tbody.innerHTML = "";
+      subjects.forEach((sub, idx) => {
+        const s1 = student.sem1 ? student.sem1[idx] || 0 : 0;
+        const s2 = student.sem2 ? student.sem2[idx] || 0 : 0;
+        const avg = ((s1 + s2) / 2).toFixed(1);
+        tbody.innerHTML += `<tr><td>${sub}</td><td>${s1}</td><td>${s2}</td><td>${avg}</td></tr>`;
+      });
+
+      resultDiv.style.display = "block";
+    } else {
+      notFoundDiv.style.display = "block";
+    }
+  }
+
+  // 3. GRADES & REPORT CARDS LOGIC
+  function populateReportSelect() {
+    const select = document.getElementById('reportStudentSelect');
+    const students = getStudents();
+    select.innerHTML = '<option value="">-- ተማሪ ይምረጡ --</option>';
+
+    students.forEach((s, idx) => {
+      select.innerHTML += `<option value="${idx}">${s.name} (${s.id})</option>`;
+    });
+  }
+
+  function generateReportCard() {
+    const idx = document.getElementById('reportStudentSelect').value;
+    const container = document.getElementById('reportCardContainer');
+
+    if (idx === "") {
+      container.style.display = "none";
+      return;
+    }
+
+    const student = getStudents()[idx];
+    document.getElementById('rcName').innerText = student.name;
+    document.getElementById('rcId').innerText = student.id;
+    document.getElementById('rcGrade').innerText = student.gradeLevel || "8ኛ";
+    document.getElementById('rcAvg').innerText = student.avgAnnual || 0;
+    document.getElementById('rcRank').innerText = "1ኛ";
+    
+    const statusEl = document.getElementById('rcStatus');
+    statusEl.innerText = student.statusAnnual || "አልፏል";
+    statusEl.className = student.avgAnnual >= 50 ? "pass" : "fail";
+
+    const tbody = document.getElementById('rcGradesBody');
+    tbody.innerHTML = "";
+    subjects.forEach((sub, i) => {
+      const s1 = student.sem1 ? student.sem1[i] || 0 : 0;
+      const s2 = student.sem2 ? student.sem2[i] || 0 : 0;
+      const avg = ((s1 + s2) / 2).toFixed(1);
+      tbody.innerHTML += `<tr><td>${sub}</td><td>${s1}</td><td>${s2}</td><td>${avg}</td></tr>`;
+    });
+
+    container.style.display = "block";
+  }
+
+  // 4. ADMIN DASHBOARD LOGIC
+  function renderAdminRoster() {
+    const students = getStudents();
+    const tbody = document.getElementById('adminRosterBody');
+    document.getElementById('totalStudentsCount').innerText = `ጠቅላላ ተማሪዎች: ${students.length}`;
+    tbody.innerHTML = "";
+
+    if (students.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:#7f8c8d;">ምንም የተመዘገበ ተማሪ አልተገኘም!</td></tr>`;
+      return;
+    }
+
+    students.forEach((s, idx) => {
+      const avg = s.avgAnnual || 0;
+      const statusClass = avg >= 50 ? "pass" : "fail";
+
+      tbody.innerHTML += `
+        <tr>
+          <td>${idx + 1}</td>
+          <td><strong>${s.id}</strong></td>
+          <td style="text-align:left;">${s.name}</td>
+          <td>${s.code}</td>
+          <td>${s.sex}</td>
+          <td>${s.age}</td>
+          <td>${s.gradeLevel || '8ኛ'}</td>
+          <td>${avg}</td>
+          <td class="${statusClass}">${s.statusAnnual || 'አልፏል'}</td>
+          <td>
+            <button class="btn-sm btn-delete" onclick="deleteStudent(${idx})">🗑️ ሰርዝ</button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  function deleteStudent(index) {
+    let students = getStudents();
+    if (confirm(`በእርግጥ የተማሪውን "${students[index].name}" መረጃ መሰረዝ ይፈልጋሉ?`)) {
+      students.splice(index, 1);
+      saveStudents(students);
+      renderAdminRoster();
+    }
+  }
+
+  // EXPORT / IMPORT EXCEL LOGIC
+  function exportExcelData() {
+    const students = getStudents();
+    if (students.length === 0) return alert("ምንም የተመዘገበ ተማሪ የለም!");
+
+    const exportData = students.map(s => ({
+      "ID": s.id, "Name": s.name, "Code": s.code, "Sex": s.sex, "Age": s.age, "Grade": s.gradeLevel || "8ኛ", "Annual_Avg": s.avgAnnual || 0
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+    XLSX.writeFile(workbook, "School_Students_Roster.xlsx");
+  }
+
+  function importExcelData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      let students = getStudents();
+      jsonData.forEach(row => {
+        students.push({
+          id: String(row["ID"] || `ST-${Math.floor(Math.random()*1000)}`),
+          name: row["Name"] || "ያልተጠቀሰ",
+          code: String(row["Code"] || "C-001"),
+          sex: row["Sex"] || "ወ",
+          age: row["Age"] || 14,
+          gradeLevel: row["Grade"] || "8ኛ",
+          avgAnnual: row["Annual_Avg"] || 80,
+          statusAnnual: (row["Annual_Avg"] || 80) >= 50 ? "አልፏል" : "ወድቋል"
+        });
+      });
+
+      saveStudents(students);
+      renderAdminRoster();
+      alert(`✅ ${jsonData.length} ተማሪዎች በትክክል ተጨምረዋል!`);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+</script>
+
+</body>
+</html>
